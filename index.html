@@ -62,6 +62,22 @@ button.enter-btn{width:100%;padding:15px;border-radius:11px;background:linear-gr
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 </head>
+  <script>
+// FIX ENTRAR - funciona mesmo se o 3D travar
+document.getElementById('btnEnter').addEventListener('click', function(){
+  var nome = document.getElementById('playerName').value || 'Lucas';
+  var hudName = document.getElementById('hud-name');
+  if(hudName) hudName.textContent = nome.toUpperCase();
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('hud').style.display = 'flex';
+  document.getElementById('controls').style.display = 'flex';
+  document.getElementById('topBtns').style.display = 'flex';
+  var tip = document.getElementById('tip');
+  if(tip){ tip.style.display = 'block'; tip.textContent = 'Entrou! Se o mundo não apareceu, recarrega com ?v=7'; }
+  // tenta avisar o jogo que logou
+  setTimeout(function(){ window.__logado = true; }, 100);
+});
+</script>
 <body>
 <div id="hud"><div class="panel"><div class="char-name" id="hud-name">LUCAS</div><div class="char-class" id="hud-class">Mago de Fogo</div><div class="bar-wrap"><div id="hp"></div></div><div class="bar-wrap stam-wrap"><div id="mana"></div></div><div class="bar-wrap stam-wrap"><div id="stam"></div></div></div><div class="panel" id="xp">Nv.1 · 0/100</div></div>
 <div id="tip">Mapa Grandão Carregado - Explore tudo!</div><div id="zone">🏰 Vila Riverwood</div><div id="talkBox"></div>
