@@ -1,1 +1,126 @@
-
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Riverwood 3D</title>
+<style>
+*{margin:0;box-sizing:border-box;font-family:system-ui}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:none}
+canvas{position:fixed;inset:0}
+#hud{position:fixed;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;z-index:10}
+.panel{background:rgba(0,0,0,.75);padding:10px 14px;border:1px solid #dab676;border-radius:12px;color:#fff}
+#controls{position:fixed;bottom:14px;left:0;right:0;display:flex;justify-content:space-between;padding:0 12px;z-index:20;align-items:flex-end}
+#stick{width:140px;height:140px;border:3px solid #fff;border-radius:50%;background:rgba(0,0,0,.35);position:relative}
+#nub{position:absolute;width:56px;height:56px;left:39px;top:39px;border-radius:50%;background:#fff}
+#btns{display:grid;grid-template-columns:repeat(3,62px);gap:8px}
+.btn{width:62px;height:62px;border-radius:50%;background:#222;color:#fff;font-weight:800;border:2px solid #fff;font-size:11px}
+#btnHit{width:72px;height:72px;background:#8c3a22}
+#btnCam{background:#111;font-size:10px}
+#topBtns{position:fixed;top:82px;right:10px;display:flex;gap:8px;z-index:20}
+.topb{padding:8px 12px;border-radius:20px;background:#000;color:#fff;border:1px solid #fff;font-weight:700}
+#fb{position:fixed;top:120px;left:50%;transform:translateX(-50%);z-index:30;background:#ffcc00;color:#000;padding:8px 18px;border-radius:20px;font-weight:900;display:none}
+#talk{position:fixed;bottom:200px;left:50%;transform:translateX(-50%);z-index:30;background:rgba(0,0,0,.85);color:#fff;padding:12px 16px;border-radius:12px;border:1px solid #dab676;display:none;max-width:90%;text-align:center}
+#login{position:fixed;inset:0;z-index:100;background:#121a14;display:grid;place-items:center;padding:18px}
+#card{width:100%;max-width:400px;background:#1a1a1a;border:1px solid #dab676;border-radius:18px;padding:24px;color:#fff;text-align:center}
+input{width:100%;padding:13px;border-radius:10px;border:1px solid #dab676;background:#000;color:#fff;margin:12px 0;font-size:16px}
+.enter{width:100%;padding:15px;border-radius:10px;background:#deb066;font-weight:900;border:0}
+.bar{width:140px;height:8px;background:#333;border-radius:4px;margin-top:5px;overflow:hidden}
+#hp{height:100%;width:100%;background:#e05a47}
+#stam{height:100%;width:100%;background:#52b788}
+</style>
+</head>
+<body>
+<div id="fb"></div><div id="talk"></div>
+<div id="hud"><div class="panel"><div id="nome" style="color:#f0d7a3;font-weight:700">LUCAS</div><div class="bar"><div id="hp"></div></div><div class="bar" style="height:5px"><div id="stam"></div></div><div id="clima" style="font-size:11px">Riverwood - Vila</div></div><div class="panel" id="xp">Nv.1</div></div>
+<div id="topBtns"><button class="topb" onclick="trocaCam()">📷 1ª / 3ª PESSOA</button><button class="topb" onclick="falar()">💬 FALAR</button></div>
+<div id="controls"><div id="stick"><div id="nub"></div></div><div id="btns"><button class="btn" id="btnCam">CAMERA</button><button class="btn" id="btnMagic" style="background:#1d4054">MAGIA</button><button class="btn" id="btnHeavy" style="background:#542850">FORTE</button><button class="btn" id="btnRoll" style="background:#253e54">ESQUIVA</button><button class="btn" id="btnJump" style="background:#2d543e">PULAR</button><button class="btn" id="btnHit">GOLPE</button></div></div>
+<div id="login"><div id="card"><div style="color:#b89a64;font-size:11px">RIVERWOOD 3D - REALISTA</div><h1 style="color:#f0d7a3;margin:8px 0">Riverwood 3D</h1><p style="font-size:13px;color:#aaa">Vila 3D • NPCs • 1ª e 3ª pessoa</p><input id="playerName" value="Lucas"><button class="enter" onclick="entrar()">ENTRAR NA VILA</button><p style="font-size:11px;color:#888;margin-top:10px">Use o joystick pra andar. Aperte FALAR perto de um NPC.</p></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+var scene=new THREE.Scene(); scene.background=new THREE.Color(0x87ceeb); scene.fog=new THREE.Fog(0x87ceeb,40,120);
+var cam=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,500); cam.position.set(0,6,10);
+var rend=new THREE.WebGLRenderer({antialias:true}); rend.setSize(innerWidth,innerHeight); rend.shadowMap.enabled=true; document.body.appendChild(rend.domElement);
+var luz=new THREE.DirectionalLight(0xffffff,1.1); luz.position.set(20,30,10); luz.castShadow=true; scene.add(luz); scene.add(new THREE.AmbientLight(0xffffff,0.6));
+function box(w,h,d,c,x,y,z){var m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:c})); m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; scene.add(m); return m;}
+function cyl(rt,rb,h,c,x,y,z){var m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,10),new THREE.MeshLambertMaterial({color:c})); m.position.set(x,y,z); m.castShadow=true; scene.add(m); return m;}
+// CHAO REALISTA
+var chao=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshLambertMaterial({color:0x4a7c2a})); chao.rotation.x=-Math.PI/2; chao.receiveShadow=true; scene.add(chao);
+var estrada=new THREE.Mesh(new THREE.PlaneGeometry(8,200),new THREE.MeshLambertMaterial({color:0x8a7a5a})); estrada.rotation.x=-Math.PI/2; estrada.position.y=0.02; estrada.receiveShadow=true; scene.add(estrada);
+var estrada2=estrada.clone(); estrada2.rotation.z=Math.PI/2; scene.add(estrada2);
+// RIO
+var rio=new THREE.Mesh(new THREE.PlaneGeometry(200,10),new THREE.MeshLambertMaterial({color:0x2a7a9a})); rio.rotation.x=-Math.PI/2; rio.position.set(0,0.03,35); scene.add(rio);
+box(10,0.5,3,0x8a6d4a,0,0.3,35);
+// VILA - CASAS REALISTAS
+function casa(x,z,cor){
+ var g=new THREE.Group();
+ var base=new THREE.Mesh(new THREE.BoxGeometry(8,4,7),new THREE.MeshLambertMaterial({color:cor})); base.position.y=2; base.castShadow=true; g.add(base);
+ var tel=new THREE.Mesh(new THREE.ConeGeometry(6.5,3,4),new THREE.MeshLambertMaterial({color:0x7a3522})); tel.position.y=5.5; tel.rotation.y=Math.PI/4; tel.castShadow=true; g.add(tel);
+ var porta=new THREE.Mesh(new THREE.BoxGeometry(1.4,2.2,0.2),new THREE.MeshLambertMaterial({color:0x4a3220})); porta.position.set(0,1.1,3.6); g.add(porta);
+ var j1=new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,0.2),new THREE.MeshLambertMaterial({color:0xffc65a,emissive:0x554400})); j1.position.set(-2.4,2.2,3.6); g.add(j1);
+ var j2=j1.clone(); j2.position.x=2.4; g.add(j2);
+ var chim=new THREE.Mesh(new THREE.BoxGeometry(0.8,2,0.8),new THREE.MeshLambertMaterial({color:0x888888})); chim.position.set(2.5,5.5,0); g.add(chim);
+ g.position.set(x,0,z); scene.add(g);
+}
+casa(-15,-15,0xe2d3b5); casa(15,-15,0xd8c8a8); casa(-15,15,0xf0e6d2); casa(15,15,0xe8d8b8); casa(0,-28,0xded0b0); casa(-28,0,0xd8b8a0); casa(28,0,0xc8d8e0);
+// ARVORES
+function arvore(x,z){var t=cyl(0.4,0.6,3,0x4a3220,x,1.5,z); var f1=new THREE.Mesh(new THREE.SphereGeometry(2.2,10,10),new THREE.MeshLambertMaterial({color:0x2a521c})); f1.position.set(x,4.5,z); f1.castShadow=true; scene.add(f1); var f2=new THREE.Mesh(new THREE.SphereGeometry(1.6,10,10),new THREE.MeshLambertMaterial({color:0x3a6e2a})); f2.position.set(x,5.8,z); scene.add(f2);}
+for(var i=0;i<30;i++){var a=Math.random()*Math.PI*2,d=40+Math.random()*35; arvore(Math.cos(a)*d,Math.sin(a)*d);}
+arvore(-8,-8); arvore(8,-8); arvore(-8,8); arvore(8,8);
+// PERSONAGEM REALISTA - 3D
+function pessoa(corRoupa,corPele){
+ var g=new THREE.Group();
+ var cab=new THREE.Mesh(new THREE.SphereGeometry(0.42,12,12),new THREE.MeshLambertMaterial({color:corPele})); cab.position.y=1.75; cab.castShadow=true; g.add(cab);
+ var cabelo=new THREE.Mesh(new THREE.SphereGeometry(0.44,12,12,0,Math.PI*2,0,1.8),new THREE.MeshLambertMaterial({color:0x2a1a0a})); cabelo.position.y=1.82; g.add(cabelo);
+ var corpo=new THREE.Mesh(new THREE.BoxGeometry(0.85,1.1,0.45),new THREE.MeshLambertMaterial({color:corRoupa})); corpo.position.y=0.95; corpo.castShadow=true; g.add(corpo);
+ var pernaE=new THREE.Mesh(new THREE.BoxGeometry(0.32,0.7,0.32),new THREE.MeshLambertMaterial({color:0x1a1a1c})); pernaE.position.set(-0.22,0.35,0); g.add(pernaE);
+ var pernaD=pernaE.clone(); pernaD.position.x=0.22; g.add(pernaD);
+ var bracE=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.9,0.25),new THREE.MeshLambertMaterial({color:corRoupa})); bracE.position.set(-0.58,1.05,0); g.add(bracE);
+ var bracD=bracE.clone(); bracD.position.x=0.58; g.add(bracD);
+ // espada
+ var esp=new THREE.Mesh(new THREE.BoxGeometry(0.08,1.4,0.08),new THREE.MeshLambertMaterial({color:0xdddddd})); esp.position.set(0.7,1.1,0); g.add(esp);
+ scene.add(g); return {g:g,pernaE:pernaE,pernaD:pernaD,bracE:bracE,bracD:bracD};
+}
+var player=pessoa(0x8c1a1a,0xe8c9a0); player.g.position.set(0,0,0);
+var npcs=[]; var falas=["Olá, viajante! Bem-vindo a Riverwood!","Cuidado com os lobos na floresta...","A taverna tem a melhor comida!","Você é o herói que estávamos esperando!","Minha filha perdeu o colar no rio...","Compre uma espada melhor no ferreiro!"];
+var coresNPC=[0x2a5a8c,0x5a8c2a,0x8c5a2a,0x6a2a8c,0x8c2a5a,0x2a8c7a];
+for(var i=0;i<6;i++){var n=pessoa(coresNPC[i],0xd8b89a); var px=[-8,8,-12,12,-4,4][i], pz=[-8,-8,8,8,20,-20][i]; n.g.position.set(px,0,pz); n.fala=falas[i]; n.t=Math.random()*10; npcs.push(n);}
+// INIMIGOS
+var inimigos=[]; for(var i=0;i<3;i++){var e=pessoa(0x1a1a1a,0x3a3a3a); e.g.position.set(20+i*6,0,-30); e.hp=100; inimigos.push(e);}
+// CONTROLES
+var joy={x:0,y:0,on:false}, primeira=false, yaw=0, S={hp:160,maxHp:160,stam:110,maxStam:110,exp:0,level:1,atk:0};
+function fb(t){var e=document.getElementById('fb');e.textContent=t;e.style.display='block';setTimeout(function(){e.style.display='none'},900);}
+function entrar(){document.getElementById('nome').textContent=(document.getElementById('playerName').value||'Lucas').toUpperCase(); document.getElementById('login').style.display='none'; fb('BEM-VINDO A RIVERWOOD 3D!');}
+function trocaCam(){primeira=!primeira; fb(primeira?'1ª PESSOA':'3ª PESSOA');}
+function falar(){var perto=null,d=4; for(var i=0;i<npcs.length;i++){var dd=npcs[i].g.position.distanceTo(player.g.position); if(dd<d){d=dd;perto=npcs[i];}} if(perto){var t=document.getElementById('talk'); t.textContent='👤 NPC: "'+perto.fala+'"'; t.style.display='block'; setTimeout(function(){t.style.display='none'},3000);} else fb('VÁ PERTO DE UM NPC E APERTE FALAR');}
+var stick=document.getElementById('stick'),nub=document.getElementById('nub');
+function gp(e){return e.touches?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};}
+function mv(e){var p=gp(e),r=stick.getBoundingClientRect(),dx=p.x-(r.left+70),dy=p.y-(r.top+70),m=48,l=Math.hypot(dx,dy); if(l>m){dx=dx/l*m;dy=dy/l*m;} joy.x=dx/m; joy.y=dy/m; nub.style.left=(39+dx)+'px'; nub.style.top=(39+dy)+'px';}
+function st(e){e.preventDefault();joy.on=true;mv(e);} function ed(e){e.preventDefault();joy.on=false;joy.x=0;joy.y=0;nub.style.left='39px';nub.style.top='39px';}
+stick.addEventListener('touchstart',st,{passive:false}); stick.addEventListener('touchmove',function(e){if(joy.on){e.preventDefault();mv(e);}}, {passive:false}); stick.addEventListener('touchend',ed,{passive:false});
+function bind(id,fn){var el=document.getElementById(id); el.addEventListener('touchstart',function(e){e.preventDefault();fn();},{passive:false}); el.addEventListener('click',function(e){e.preventDefault();fn();});}
+bind('btnCam',trocaCam);
+bind('btnHit',function(){S.atk=0.3; fb('GOLPE!'); for(var i=0;i<inimigos.length;i++){var e=inimigos[i]; if(e.g.position.distanceTo(player.g.position)<3){e.hp-=40; if(e.hp<=0){e.g.visible=false; S.exp+=50; fb('INIMIGO DERROTADO! +50 XP');}}}});
+bind('btnHeavy',function(){fb('GOLPE FORTE!');}); bind('btnMagic',function(){fb('MAGIA! ✨');}); bind('btnJump',function(){player.g.position.y=1; setTimeout(function(){player.g.position.y=0},250); fb('PULOU!');}); bind('btnRoll',function(){fb('ESQUIVA!');});
+// LOOP
+var clock=0;
+function loop(){requestAnimationFrame(loop); clock+=0.016;
+ var v=5; var px=player.g.position.x, pz=player.g.position.z;
+ if(Math.abs(joy.x)>0.05||Math.abs(joy.y)>0.05){
+   player.g.position.x+=joy.x*v*0.016*2; player.g.position.z+=joy.y*v*0.016*2;
+   yaw=Math.atan2(joy.x,joy.y); player.g.rotation.y=yaw;
+   var s=Math.sin(clock*12); player.pernaE.position.z=s*0.2; player.pernaD.position.z=-s*0.2; player.bracE.position.z=-s*0.15; player.bracD.position.z=s*0.15;
+ }
+ // NPCs andando
+ for(var i=0;i<npcs.length;i++){var n=npcs[i]; n.t+=0.016; n.g.position.x+=Math.sin(n.t)*0.008; n.g.position.z+=Math.cos(n.t*0.7)*0.008; n.g.rotation.y=Math.atan2(Math.sin(n.t),Math.cos(n.t*0.7));}
+ // inimigos perseguem
+ for(var i=0;i<inimigos.length;i++){var e=inimigos[i]; if(!e.g.visible)continue; var d=e.g.position.distanceTo(player.g.position); if(d<12&&d>1.2){e.g.position.x+=(player.g.position.x-e.g.position.x)/d*0.03; e.g.position.z+=(player.g.position.z-e.g.position.z)/d*0.03; e.g.lookAt(player.g.position);} if(d<1.5){S.hp=Math.max(0,S.hp-0.2);} }
+ // camera
+ if(primeira){ cam.position.set(player.g.position.x+Math.sin(yaw)*0.2,2.0,player.g.position.z+Math.cos(yaw)*0.2); cam.lookAt(player.g.position.x+Math.sin(yaw)*10,1.6,player.g.position.z+Math.cos(yaw)*10); player.g.visible=false; }
+ else{ player.g.visible=true; var cx=player.g.position.x-Math.sin(yaw)*7, cz=player.g.position.z-Math.cos(yaw)*7; cam.position.x+=(cx-cam.position.x)*0.15; cam.position.z+=(cz-cam.position.z)*0.15; cam.position.y+=((4.5)-cam.position.y)*0.15; cam.lookAt(player.g.position.x,1.5,player.g.position.z); }
+ document.getElementById('hp').style.width=(S.hp/S.maxHp*100)+'%'; document.getElementById('stam').style.width=(S.stam/S.maxStam*100)+'%'; document.getElementById('xp').textContent='Nv.'+S.level+' - '+S.exp+'/100';
+ rend.render(scene,cam);
+}
+loop();
+addEventListener('resize',function(){cam.aspect=innerWidth/innerHeight; cam.updateProjectionMatrix(); rend.setSize(innerWidth,innerHeight);});
+</script>
+</body>
+</html>
